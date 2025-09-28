@@ -9,6 +9,7 @@ typedef struct LLConfig
     std::string ProcessName;
     std::string LibraryName;
 	int RunDelay;
+	bool ShowConsoleWindow;
 };
 
 // Various error codes
@@ -19,9 +20,21 @@ enum class LLError {
 	MissingLibraryPath,
 	MissingProcessPath,
 	InvalidDelayValue,
+	InvalidShowConsoleValue,
 	CouldntSpawnProcess,
 	CouldntInjectLibrary
 };
+
+//Small helper function for converting c style string to a bool
+bool to_bool(const char* str)
+{
+	if (strcmp(str, "true") || strcmp(str, "True"))
+		return true;
+	if (strcmp(str, "false") || strcmp(str, "False"))
+		return false;
+	else
+		throw std::invalid_argument("Invalid boolean string.");
+}
 
 // Function to load up all of our settings values into our struct
 /* Proper config syntax -> llconfig.ini
@@ -29,6 +42,7 @@ enum class LLError {
 ProcessName=Process.exe
 LibraryName=Library.dll
 RunDelay=1
+ShowConsoleWindow=True
 */
 LLConfig LoadConfig(const std::string& ConfigName)
 {
@@ -49,13 +63,24 @@ LLConfig LoadConfig(const std::string& ConfigName)
 	{
 		throw LLError::InvalidDelayValue;
 	}
+	try
+	{
+		config.ShowConsoleWindow = to_bool(ini.GetValue("settings", "ShowConsoleWindow", "true"));
+	}
+	catch (std::invalid_argument)
+	{
+		throw LLError::InvalidShowConsoleValue;
+	}
+
 	if (config.LibraryName == "null")
 		throw LLError::MissingLibraryPath;
+
 	if (config.ProcessName == "null")
 		throw LLError::MissingProcessPath;
-	if (config.RunDelay == 0)
+
 	if (!std::filesystem::exists(config.LibraryName))
 		throw LLError::LibraryNotFound;
+
 	if (!std::filesystem::exists(config.ProcessName))
 		throw LLError::ProcessNotFound;
 
@@ -115,6 +140,9 @@ int main()
 		auto config = LoadConfig("llconfig.ini");
 		std::cout << "[*] Config loaded: " << config.ProcessName << " - " << config.LibraryName << std::endl;
 
+		if (!config.ShowConsoleWindow)
+			ShowWindow(GetConsoleWindow(), SW_HIDE); // NOTE; this does not work on Windows 11's default terminal, added purely for backwards compatibility
+
 		auto process = SpawnChildProcess(config.ProcessName);
 		std::cout << "[*] Process created with process ID: " << process.dwProcessId << std::endl;
 
@@ -138,6 +166,7 @@ int main()
 		case LLError::MissingLibraryPath: std::cerr << "[!] Fatal error while loading config. (MissingLibraryPath)\n"; break;
 		case LLError::MissingProcessPath: std::cerr << "[!] Fatal error while loading config. (MissingProcessPath)\n"; break;
 		case LLError::InvalidDelayValue: std::cerr << "[!] Fatal error while loading config. (InvalidDelayValue)\n"; break;
+		case LLError::InvalidShowConsoleValue: std::cerr << "[!] Fatal error while loading config. (InvalidShowConsoleValue)\n"; break;
 		case LLError::CouldntSpawnProcess: std::cerr << "[!] Fatal error while spawning process. (Try running as UAC admin.)\n"; break;
 		case LLError::CouldntInjectLibrary: std::cerr << "[!] Fatal error while injecting library. (Try running as UAC admin.)\n"; break;
 		}
