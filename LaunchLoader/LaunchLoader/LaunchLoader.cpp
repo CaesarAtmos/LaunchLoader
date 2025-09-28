@@ -1,6 +1,8 @@
 #include <iostream>
+#include "ThirdParty/SimpleIni.h"
 
 int main()
 {
-    std::cout << "Hello World!\n";
+
+    return 0;
 }
