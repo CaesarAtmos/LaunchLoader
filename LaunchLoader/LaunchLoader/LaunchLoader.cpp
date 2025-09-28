@@ -8,6 +8,7 @@ typedef struct LLConfig
 {
     std::string ProcessName;
     std::string LibraryName;
+	int RunDelay;
 };
 
 // Various error codes
@@ -17,11 +18,18 @@ enum class LLError {
 	ProcessNotFound,
 	MissingLibraryPath,
 	MissingProcessPath,
+	InvalidDelayValue,
 	CouldntSpawnProcess,
 	CouldntInjectLibrary
 };
 
 // Function to load up all of our settings values into our struct
+/* Proper config syntax -> llconfig.ini
+[settings]
+ProcessName=Process.exe
+LibraryName=Library.dll
+RunDelay=1
+*/
 LLConfig LoadConfig(const std::string& ConfigName)
 {
 	CSimpleIniA ini;
@@ -33,10 +41,19 @@ LLConfig LoadConfig(const std::string& ConfigName)
 	LLConfig config;
 	config.ProcessName = ini.GetValue("settings", "ProcessName", "null");
 	config.LibraryName = ini.GetValue("settings", "LibraryName", "null");
+	try
+	{
+		config.RunDelay = std::stoi(ini.GetValue("settings", "RunDelay", "0"));
+	}
+	catch (std::invalid_argument)
+	{
+		throw LLError::InvalidDelayValue;
+	}
 	if (config.LibraryName == "null")
 		throw LLError::MissingLibraryPath;
 	if (config.ProcessName == "null")
 		throw LLError::MissingProcessPath;
+	if (config.RunDelay == 0)
 	if (!std::filesystem::exists(config.LibraryName))
 		throw LLError::LibraryNotFound;
 	if (!std::filesystem::exists(config.ProcessName))
@@ -102,9 +119,10 @@ int main()
 		std::cout << "[*] Process created with process ID: " << process.dwProcessId << std::endl;
 
 		LoadRemoteLibrary(config.LibraryName, process);
-		std::cout << "[*] Library injected. Starting in 1 second" << std::endl;
 
-		Sleep(1000);
+		std::cout << "[*] Library injected. Starting in " << config.RunDelay << " second(s)\n";
+		Sleep(config.RunDelay * 1000); // 1 second = 1000ms; janky, maybe clarify better in the future
+
 		ResumeThread(process.hThread);
 		CloseHandle(process.hThread);
 		CloseHandle(process.hProcess);
@@ -119,6 +137,7 @@ int main()
 		case LLError::ProcessNotFound: std::cerr << "[!] Fatal error while loading config. (ProcessNotFound)\n"; break;
 		case LLError::MissingLibraryPath: std::cerr << "[!] Fatal error while loading config. (MissingLibraryPath)\n"; break;
 		case LLError::MissingProcessPath: std::cerr << "[!] Fatal error while loading config. (MissingProcessPath)\n"; break;
+		case LLError::InvalidDelayValue: std::cerr << "[!] Fatal error while loading config. (InvalidDelayValue)\n"; break;
 		case LLError::CouldntSpawnProcess: std::cerr << "[!] Fatal error while spawning process. (Try running as UAC admin.)\n"; break;
 		case LLError::CouldntInjectLibrary: std::cerr << "[!] Fatal error while injecting library. (Try running as UAC admin.)\n"; break;
 		}
