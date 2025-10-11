@@ -28,9 +28,9 @@ enum class LLError {
 //Small helper function for converting c style string to a bool
 bool to_bool(const char* str)
 {
-	if (strcmp(str, "true") || strcmp(str, "True"))
+	if (strcmp(str, "true") || strcmp(str, "True") || strcmp(str, "TRUE"))
 		return true;
-	if (strcmp(str, "false") || strcmp(str, "False"))
+	if (strcmp(str, "false") || strcmp(str, "False") || strcmp(str, "FALSE"))
 		return false;
 	else
 		throw std::invalid_argument("Invalid boolean string.");
