@@ -27,4 +27,7 @@
       <Filter>ThirdParty</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="llconfig.ini" />
+  </ItemGroup>
 </Project>
